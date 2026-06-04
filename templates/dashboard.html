@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - AI Interviewer{% endblock %}
+{% block body %}
+<div class="container-wide">
+    <div class="page-title">
+        <h1>Analysis Dashboard</h1>
+        <p>View and analyze all your interview studies</p>
+    </div>
+
+    {% if studies %}
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="number">{{ studies|length }}</div>
+            <div class="label">Total Studies</div>
+        </div>
+    </div>
+
+    {% for study in studies %}
+    <div class="card">
+        <div class="flex-between">
+            <div>
+                <h3><a href="/dashboard/{{ study.id }}" style="text-decoration:none;color:inherit;">{{ study.title }}</a></h3>
+                <div class="meta">Created {{ study.created_at[:10] }}</div>
+            </div>
+            <a href="/dashboard/{{ study.id }}" class="btn btn-secondary btn-sm">View Details</a>
+        </div>
+        <p style="margin-top:8px;font-size:14px;color:var(--text-muted);">{{ study.research_question }}</p>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <h3>No studies yet</h3>
+        <p>Create your first interview study to get started.</p>
+        <a href="/" class="btn btn-primary mt-16">Create Study</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
