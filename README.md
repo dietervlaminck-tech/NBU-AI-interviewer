@@ -10,22 +10,45 @@ AI-powered qualitative research interview platform. Researchers create interview
 - **Analysis dashboard** — view sessions, read transcripts, export data as JSON
 - **Nyenrode corporate identity** — full branding throughout all interfaces
 
-## Architecture
+## Branches
 
-| Component | Technology |
-|-----------|-----------|
-| Web framework | Flask (Python) |
-| AI model | Anthropic Claude (Sonnet/Opus/Haiku) |
-| Database | SQLite |
-| Streaming | Server-Sent Events (SSE) |
-| Deployment | Docker / Azure Web App |
+| Branch | Purpose | Deployment target |
+|--------|---------|-------------------|
+| `main` | Production version | Azure Web App (Docker) |
+| `vercel` | Demo version | Vercel (serverless) |
+
+## Quick deploy to Vercel (this branch)
+
+### One-click deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdietervlaminck-tech%2FNBU-AI-interviewer%2Ftree%2Fvercel&env=ANTHROPIC_API_KEY,SECRET_KEY&envDescription=API%20keys%20needed%20for%20the%20AI%20Interviewer&envLink=https%3A%2F%2Fconsole.anthropic.com)
+
+### Manual deploy
+
+1. Install the [Vercel CLI](https://vercel.com/docs/cli): `npm i -g vercel`
+2. Clone this branch:
+   ```bash
+   git clone -b vercel https://github.com/dietervlaminck-tech/NBU-AI-interviewer.git
+   cd NBU-AI-interviewer
+   ```
+3. Deploy:
+   ```bash
+   vercel --prod
+   ```
+4. Set environment variables in the Vercel dashboard:
+   - `ANTHROPIC_API_KEY` — your Anthropic API key ([get one here](https://console.anthropic.com))
+   - `SECRET_KEY` — any random string
+
+### Demo limitations
+
+This Vercel version uses ephemeral `/tmp` storage (SQLite). Data may be lost when serverless functions cold-start. This is fine for demos and short-term testing. For production use with persistent data, deploy the `main` branch to Azure.
 
 ## Local development
 
 ```bash
 # 1. Clone and install
-git clone <this-repo>
-cd ai-interviewer
+git clone -b vercel https://github.com/dietervlaminck-tech/NBU-AI-interviewer.git
+cd NBU-AI-interviewer
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -39,77 +62,35 @@ python app.py
 # Open http://localhost:5001
 ```
 
-## Azure deployment
+## Architecture
 
-### Option A: Azure Web App with Docker
-
-1. **Build and push the Docker image**
-   ```bash
-   az acr build --registry <your-registry> --image ai-interviewer:latest .
-   ```
-
-2. **Create the Web App**
-   ```bash
-   az webapp create \
-     --resource-group <rg-name> \
-     --plan <plan-name> \
-     --name ai-interviewer \
-     --deployment-container-image-name <your-registry>.azurecr.io/ai-interviewer:latest
-   ```
-
-3. **Set environment variables**
-   ```bash
-   az webapp config appsettings set --name ai-interviewer --resource-group <rg-name> --settings \
-     ANTHROPIC_API_KEY="sk-ant-..." \
-     SECRET_KEY="<random-string>"
-   ```
-
-4. **Mount persistent storage** (for SQLite data)
-   ```bash
-   az webapp config storage-account add \
-     --name ai-interviewer \
-     --resource-group <rg-name> \
-     --custom-id data \
-     --storage-type AzureFiles \
-     --share-name ai-interviewer-data \
-     --mount-path /app/data \
-     --account-name <storage-account>
-   ```
-
-### Option B: Azure Web App from GitHub
-
-1. Create an Azure Web App (Python 3.13, Linux)
-2. Connect to this GitHub repository under Deployment Center
-3. Set the startup command: `startup.sh`
-4. Add the environment variables (see above) under Configuration > Application Settings
-5. Mount Azure Files to `/app/data` for persistent SQLite storage
-
-### Production considerations
-
-- **Persistent storage**: SQLite stores data in `./data/interviews.db`. On Azure, mount an Azure Files share to `/app/data` so data survives restarts.
-- **HTTPS**: Azure Web App provides HTTPS by default via `*.azurewebsites.net`.
-- **Custom domain**: Configure under Custom Domains in the Azure portal.
-- **Scaling**: For high usage (50+ concurrent interviews), consider migrating from SQLite to Azure Database for PostgreSQL.
-- **API key management**: Store `ANTHROPIC_API_KEY` in Azure Key Vault and reference it from App Settings.
-- **Authentication**: To restrict study creation to faculty, add Azure AD authentication via the Azure portal (Authentication blade).
+| Component | Technology |
+|-----------|-----------|
+| Web framework | Flask (Python) |
+| AI model | Anthropic Claude (Sonnet/Opus/Haiku) |
+| Database | SQLite (`/tmp` on Vercel, `./data` locally) |
+| Streaming | Server-Sent Events (SSE) |
+| Deployment | Vercel Serverless Functions |
 
 ## Environment variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key (get from console.anthropic.com) |
+| `ANTHROPIC_API_KEY` | Yes | Anthropic API key |
 | `SECRET_KEY` | Yes | Random string for Flask session security |
 
 ## Cost estimate
 
 - **Anthropic API**: ~€0.05–0.15 per interview session (Claude Sonnet)
-- **Azure Web App**: B1 plan (~€12/month) is sufficient for moderate usage
+- **Vercel**: Free tier supports hobby usage; Pro plan ($20/mo) for 60s function timeout
 
 ## Project structure
 
 ```
+├── api/
+│   └── index.py            # Vercel serverless entry point
 ├── app.py                  # Flask routes and API endpoints
-├── database.py             # SQLite database layer
+├── database.py             # SQLite database layer (/tmp on Vercel)
 ├── interview_bot.py        # Claude API integration and streaming
 ├── templates/
 │   ├── base.html           # Base template with Nyenrode branding
@@ -120,8 +101,7 @@ python app.py
 │   └── study_dashboard.html # Per-study analytics
 ├── static/
 │   └── style.css           # Nyenrode corporate identity styles
-├── Dockerfile              # Container build
-├── startup.sh              # Azure startup script
+├── vercel.json             # Vercel deployment config
 ├── requirements.txt        # Python dependencies
 └── .env.example            # Environment variable template
 ```

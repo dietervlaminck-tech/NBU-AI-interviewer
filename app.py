@@ -88,7 +88,10 @@ def api_first_message(session_id):
         update_session_messages(session_id, messages)
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
-    return Response(stream_with_context(generate()), mimetype="text/event-stream")
+    return Response(stream_with_context(generate()), mimetype="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    })
 
 
 @app.route("/api/session/<session_id>/message", methods=["POST"])
@@ -135,7 +138,10 @@ def api_send_message(session_id):
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
-    return Response(stream_with_context(generate()), mimetype="text/event-stream")
+    return Response(stream_with_context(generate()), mimetype="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    })
 
 
 @app.route("/dashboard")
